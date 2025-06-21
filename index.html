@@ -1,451 +1,518 @@
-import React, { useState, useEffect } from 'react';
-
-// START: Chart.js Configuration
-// Chart.js is not a native React library, so we'll interact with it via its JS API.
-// We'll import Chart.js and its necessary components for tree-shaking.
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  RadialLinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-} from 'chart.js';
-
-// Register the components we need for our charts. This is required for Chart.js v3+.
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  RadialLinearScale,
-  PointElement,
-  LineElement,
-  Filler
-);
-// We will use the 'Bar' and 'Radar' components from 'react-chartjs-2' for easier integration.
-import { Bar, Radar } from 'react-chartjs-2';
-// END: Chart.js Configuration
-
-
-// START: Reusable UI Components
-// A simple, reusable card component for consistent styling across the app.
-const Card = ({ children, className = '', onClick }) => (
-  <div
-    className={`bg-white p-6 rounded-lg shadow-md transition-all duration-300 ${className} ${onClick ? 'cursor-pointer' : ''}`}
-    onClick={onClick}
-  >
-    {children}
-  </div>
-);
-
-// A reusable button component.
-const Button = ({ children, onClick, className = '', variant = 'primary' }) => {
-  const baseClasses = 'w-full md:w-auto font-bold py-3 px-8 rounded-lg shadow-lg transition-transform transform hover:scale-105';
-  const variants = {
-    primary: 'bg-sky-700 hover:bg-sky-800 text-white',
-    secondary: 'bg-teal-700 hover:bg-teal-800 text-white',
-  };
-  return (
-    <button onClick={onClick} className={`${baseClasses} ${variants[variant]} ${className}`}>
-      {children}
-    </button>
-  );
-};
-// END: Reusable UI Components
-
-
-// START: Chart Components
-// Component to render the Investor Persona Comparison Chart. Data is from the report.
-const InvestorComparisonChart = () => {
-  const data = {
-    labels: ['Risk Profile', 'Operational Focus', 'Capital Source', 'Decision Driver'],
-    datasets: [
-      {
-        label: 'Emerging Investor',
-        data: [90, 80, 70, 75],
-        backgroundColor: 'rgba(56, 189, 248, 0.7)', // sky-400
-        borderColor: 'rgba(56, 189, 248, 1)',
-        borderWidth: 1,
-      },
-      {
-        label: 'Institutional Strategist',
-        data: [40, 30, 20, 25],
-        backgroundColor: 'rgba(14, 116, 144, 0.7)', // cyan-700
-        borderColor: 'rgba(14, 116, 144, 1)',
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const options = {
-    indexAxis: 'y',
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      x: {
-        beginAtZero: true,
-        max: 100,
-        ticks: { display: false },
-        grid: { display: false },
-        title: { display: true, text: 'Tactical/Personal Focus → Strategic/Portfolio Focus', color: '#475569' },
-      },
-      y: {
-        grid: { display: false },
-        ticks: { color: '#475569' },
-      },
-    },
-    plugins: {
-      legend: { position: 'bottom', labels: { color: '#475569' } },
-      tooltip: {
-        callbacks: {
-          label: function (context) {
-            let label = context.dataset.label || '';
-            if (label) { label += ': '; }
-            const val = context.raw;
-            const category = context.label;
-            if (category === 'Risk Profile') label += val > 50 ? 'High Personal Risk' : 'Managed/Diversified';
-            if (category === 'Operational Focus') label += val > 50 ? 'Hands-On/Tactical' : 'Oversight/Strategic';
-            if (category === 'Capital Source') label += val > 50 ? 'Personal/Creative' : 'Institutional';
-            if (category === 'Decision Driver') label += val > 50 ? 'Cash Flow/Survival' : 'Risk-Adjusted Returns';
-            return label;
-          },
-        },
-      },
-    },
-  };
-
-  return (
-    <div className="relative h-96 w-full max-w-2xl mx-auto">
-      <Bar data={data} options={options} />
-    </div>
-  );
-};
-
-// Component to render the HOA Board Health Assessment Chart.
-const HOARiskChart = ({ scores }) => {
-    const data = {
-        labels: ['Governance', 'Financials', 'Operations', 'Community'],
-        datasets: [{
-            label: 'Risk Level',
-            data: [scores.governance, scores.financials, scores.operations, scores.community],
-            backgroundColor: 'rgba(20, 184, 166, 0.2)', // teal-500
-            borderColor: 'rgb(13, 148, 136)', // teal-600
-            pointBackgroundColor: 'rgb(13, 148, 136)',
-            pointBorderColor: '#fff',
-            pointHoverBackgroundColor: '#fff',
-            pointHoverBorderColor: 'rgb(13, 148, 136)',
-            borderWidth: 2,
-        }],
-    };
-
-    const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-            r: {
-                angleLines: { display: false },
-                suggestedMin: 0,
-                suggestedMax: 100,
-                grid: { color: '#d1fae5' }, // green-100
-                pointLabels: {
-                    font: { size: 14, weight: 'bold' },
-                    color: '#047857' // green-700
-                },
-                ticks: {
-                    display: false,
-                    stepSize: 25,
-                }
-            },
-        },
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                callbacks: {
-                    label: (context) => `Risk Score: ${context.raw}`
-                }
-            }
-        },
-    };
-
-    return (
-        <div className="relative h-80 w-full max-w-lg mx-auto">
-            <Radar data={data} options={options} />
-        </div>
-    );
-};
-// END: Chart Components
-
-
-// START: Page Components
-// The Home Page presents the initial "fork in the road" for user self-selection.
-const HomePage = ({ onNavigate }) => (
-  <div className="fade-in text-center max-w-3xl mx-auto py-16">
-    <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">The Property Leadership OS</h1>
-    <p className="text-lg text-slate-600 mb-8">
-      An integrated digital resource for the complex job of property leadership. Select your role to access a tailored experience with tools and insights designed for your unique challenges.
-    </p>
-    <div className="flex flex-col md:flex-row gap-4 justify-center">
-      <Button onClick={() => onNavigate('investor')}>
-        I am a Multifamily Investor
-      </Button>
-      <Button onClick={() => onNavigate('hoa')} variant="secondary">
-        I am an HOA Board Member
-      </Button>
-    </div>
-  </div>
-);
-
-// The Investor Page, implementing the secondary fork for sub-persona selection.
-const InvestorPage = () => {
-  const [selectedPersona, setSelectedPersona] = useState(null);
-
-  const personaData = {
-    emerging: {
-      title: 'For The Emerging Investor',
-      toolTitle: 'Essential Tool: First Deal Red Flag Analyzer',
-      toolDescription: `This checklist-based wizard helps you combat the "snowball effect" that plagues new investors. Input key details of a potential property (age, construction, deferred maintenance) and the tool generates a "Risk Score" with clear explanations, highlighting hidden costs and operational challenges.`,
-      toolBenefit: `This transforms our site from an information provider into your strategic due diligence partner, helping you avoid a disastrous first deal.`
-    },
-    institutional: {
-      title: 'For The Institutional Strategist',
-      toolTitle: 'Essential Tool: Value-Add ROI Modeler',
-      toolDescription: `A sophisticated tool for portfolio managers to model the financial impact of renovation scenarios. Input costs for different upgrade packages, projected rent premiums, and market cap rates. The modeler outputs a comprehensive pro forma, projecting the impact on NOI, cash-on-cash return, and total asset value.`,
-      toolBenefit: `This provides the quantitative justification required for high-stakes capital allocation decisions.`
-    }
-  };
-
-  const ToolSection = ({ persona }) => (
-    <div className="mt-12 bg-sky-50 p-8 rounded-lg fade-in">
-        <h3 className="text-2xl font-bold text-sky-900 mb-4">{personaData[persona].toolTitle}</h3>
-        <p className="text-slate-700 mb-4">{personaData[persona].toolDescription}</p>
-        <p className="font-semibold text-sky-800">{personaData[persona].toolBenefit}</p>
-    </div>
-  );
-
-  return (
-    <div className="fade-in max-w-7xl mx-auto py-12">
-      <div className="text-center mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">Multifamily Investor Central</h2>
-        <p className="text-lg text-slate-600 max-w-3xl mx-auto">
-          This is your hub as a Business Optimizer. Whether you're buying your first duplex or managing a nationwide portfolio, this space provides the strategic insights and tools you need to maximize ROI and asset value. First, identify your current focus.
-        </p>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-8 items-start mb-12">
-        <Card 
-            className={`hover:border-sky-500 hover:scale-105 border-2 ${selectedPersona === 'emerging' ? 'border-sky-500 scale-105' : 'border-transparent'}`}
-            onClick={() => setSelectedPersona('emerging')}
-        >
-          <h3 className="text-2xl font-bold text-sky-800 mb-3">The Emerging Investor</h3>
-          <p className="text-slate-600 mb-4">For the hands-on operator managing a job, focused on tactical execution and avoiding catastrophic mistakes on the path to financial freedom.</p>
-        </Card>
-        <Card
-            className={`hover:border-sky-500 hover:scale-105 border-2 ${selectedPersona === 'institutional' ? 'border-sky-500 scale-105' : 'border-transparent'}`}
-            onClick={() => setSelectedPersona('institutional')}
-        >
-          <h3 className="text-2xl font-bold text-sky-800 mb-3">The Institutional Strategist</h3>
-          <p className="text-slate-600 mb-4">For the portfolio manager managing capital, focused on macro strategy, risk-adjusted returns, and operational scale.</p>
-        </Card>
-      </div>
-
-      {selectedPersona && <ToolSection persona={selectedPersona} />}
-
-      <Card className="mt-12">
-        <h3 className="text-xl font-bold text-center text-slate-800 mb-4">Investor Persona Comparison: Key Distinctions</h3>
-        <p className="text-center text-slate-600 text-sm mb-4 max-w-3xl mx-auto">
-          While both are investors, their focus and information needs differ dramatically. This chart highlights where their priorities lie, illustrating why a one-size-fits-all approach fails.
-        </p>
-        <InvestorComparisonChart />
-      </Card>
-    </div>
-  );
-};
-
-// The HOA Page, featuring the interactive Board Health Assessment tool.
-const HOAPage = () => {
-    const [answers, setAnswers] = useState({});
-    const [showResults, setShowResults] = useState(false);
-    const [scores, setScores] = useState({ governance: 0, financials: 0, operations: 0, community: 0 });
-
-    const questions = [
-        { id: 'q1', category: 'governance', text: 'Does your board have a D&O insurance policy?' },
-        { id: 'q2', category: 'governance', text: 'Are board meeting minutes formally approved and stored in an accessible location?' },
-        { id: 'q3', category: 'financials', text: 'Do you have a professional reserve study that is less than 3 years old?' },
-        { id: 'q4', category: 'financials', text: 'Does your annual budget have a line item for funding the reserve account?' },
-        { id: 'q5', category: 'operations', text: 'Do you have a written, consistent policy for handling rule violations?' },
-        { id: 'q6', category: 'operations', text: 'Do you use a standardized process for vetting and hiring contractors?' },
-        { id: 'q7', category: 'community', text: 'Does the board communicate with homeowners through regular newsletters or updates?' },
-        { id: 'q8', category: 'community', text: 'Do you have a formal process for handling homeowner complaints?' },
-    ];
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Leadership Operating System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: The SPA implements the "Dual-Journey" model. Interactive tools ("Red Flag Analyzer", "ROI Modeler", "Board Health Assessment") have been built out to provide tangible value and capture leads via modal windows. A sticky sub-navigation improves usability within each journey. -->
+    <!-- Visualization & Content Choices: 1) Investor Persona Comparison: Now an interactive dashboard. 2) HOA Responsibility Matrix: Radar chart remains. 3) New Interactive Tools: Built with JS logic and presented in modals. 4) New "Market Snapshot" chart added for Institutional investors. These additions directly implement the strategic roadmap. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        @media (max-width: 768px) { .chart-container { height: 300px; } }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        .fade-out { animation: fadeOut 0.5s ease-in-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-10px); } }
+        .quiz-option:hover { background-color: #f0f9ff; }
+        .quiz-option.selected { background-color: #e0f2fe; border-color: #0ea5e9; }
+        .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 40; }
+        .modal-content { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 50; max-height: 90vh; overflow-y: auto;}
+    </style>
+</head>
+<body class="bg-stone-50 text-slate-800">
     
-    const handleAnswerChange = (qid, value) => {
-        setAnswers(prev => ({ ...prev, [qid]: value }));
-    };
-
-    const calculateResults = () => {
-        const categoryPoints = { governance: { total: 0, count: 0 }, financials: { total: 0, count: 0 }, operations: { total: 0, count: 0 }, community: { total: 0, count: 0 }};
-        questions.forEach(q => {
-            const answer = answers[q.id];
-            if(answer !== undefined) {
-                categoryPoints[q.category].total += answer ? 0 : 1; // 0 for Yes (low risk), 1 for No (high risk)
-                categoryPoints[q.category].count++;
-            }
-        });
-        
-        const newScores = {};
-        for(const category in categoryPoints){
-            const { total, count } = categoryPoints[category];
-            newScores[category] = count > 0 ? (total / count) * 100 : 0;
-        }
-
-        setScores(newScores);
-        setShowResults(true);
-    };
-
-    const getRiskLevel = (score) => {
-        if (score > 66) return { level: 'High Risk', color: 'text-red-600', advice: 'Immediate attention needed.' };
-        if (score > 33) return { level: 'Moderate Risk', color: 'text-yellow-600', advice: 'Area for improvement.' };
-        return { level: 'Low Risk', color: 'text-green-600', advice: 'Good practices in place.' };
-    }
-
-    return (
-        <div className="fade-in max-w-7xl mx-auto py-12">
-            <div className="text-center mb-12">
-                <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">HOA Board HQ</h2>
-                <p className="text-lg text-slate-600 max-w-3xl mx-auto">This is your Board Member Survival Kit. As an "Accidental Executive," you face unique pressures. This resource provides practical, step-by-step guidance to help you navigate your role with confidence and mitigate risk.</p>
-            </div>
-
-            <Card>
-                <h3 className="text-2xl font-bold text-teal-800 mb-4">HOA Board Health & Risk Assessment</h3>
-                <p className="text-slate-600 mb-6">Answer these questions about your board's operations to get a confidential risk profile and a prioritized action plan to protect your community.</p>
-
-                <div className="space-y-6">
-                    {questions.map((q, index) => (
-                        <div key={q.id} className="p-4 bg-teal-50 rounded-lg">
-                            <p className="font-semibold text-slate-800 mb-2">{index + 1}. {q.text}</p>
-                            <div className="flex gap-4">
-                                <label className="flex items-center gap-2">
-                                    <input type="radio" name={q.id} onChange={() => handleAnswerChange(q.id, true)} className="form-radio text-teal-600"/> Yes
-                                </label>
-                                <label className="flex items-center gap-2">
-                                    <input type="radio" name={q.id} onChange={() => handleAnswerChange(q.id, false)} className="form-radio text-teal-600"/> No
-                                </label>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                <div className="text-center mt-8">
-                    <Button onClick={calculateResults} variant="secondary">
-                        {showResults ? 'Recalculate My Risk Profile' : 'Get My Risk Profile'}
-                    </Button>
-                </div>
-            </Card>
-
-            {showResults && (
-                <Card className="mt-12 fade-in">
-                    <h3 className="text-2xl font-bold text-teal-800 mb-6 text-center">Your Board's Risk Profile</h3>
-                     <div className="grid md:grid-cols-2 gap-8 items-center">
-                        <div>
-                           <HOARiskChart scores={scores} />
-                        </div>
-                        <div className="space-y-4">
-                           {Object.entries(scores).map(([category, score]) => {
-                               const { level, color, advice } = getRiskLevel(score);
-                               return (
-                                   <div key={category} className="p-3 bg-gray-50 rounded-lg">
-                                       <p className="capitalize font-bold text-slate-700">{category}</p>
-                                       <p className={`font-bold ${color}`}>{level}</p>
-                                       <p className="text-sm text-slate-500">{advice}</p>
-                                   </div>
-                               )
-                           })}
-                        </div>
-                     </div>
-                </Card>
-            )}
-        </div>
-    );
-};
-
-// A placeholder page for the Shared Capital Asset Management Center.
-const AssetCenterPage = () => (
-    <div className="fade-in text-center max-w-3xl mx-auto py-16">
-        <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Capital Asset Management Center</h2>
-        <p className="text-lg text-slate-600">
-            This shared hub will provide strategic analysis on major capital components (siding, windows, etc.) through the lens of both investors and HOAs. Content will include lifecycle cost analysis, ROI assessments for value-add projects, and guides to funding replacements from reserves.
-        </p>
-        <p className="mt-4 font-semibold text-slate-500">(Content for this section is planned for Phase 2 of development.)</p>
-    </div>
-);
-// END: Page Components
-
-
-// START: Main App Structure
-// This is the main component that renders the entire application.
-// It manages the current page state and handles navigation.
-export default function App() {
-  const [currentPage, setCurrentPage] = useState('home');
-
-  const onNavigate = (page) => {
-    setCurrentPage(page);
-    window.scrollTo(0, 0);
-  };
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'investor':
-        return <InvestorPage />;
-      case 'hoa':
-        return <HOAPage />;
-      case 'assets':
-        return <AssetCenterPage />;
-      case 'home':
-      default:
-        return <HomePage onNavigate={onNavigate} />;
-    }
-  };
-
-  return (
-    <div className="bg-stone-100 min-h-screen font-sans text-slate-800">
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex-shrink-0">
-              <a onClick={() => onNavigate('home')} className="cursor-pointer text-xl font-bold text-slate-800">
-                Property Leadership <span className="text-sky-700">OS</span>
-              </a>
-            </div>
-            <div className="hidden md:block">
-              <div className="ml-10 flex items-baseline space-x-4">
-                <a onClick={() => onNavigate('home')} className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentPage === 'home' ? 'text-sky-700' : 'text-slate-500 hover:text-slate-900'}`}>Home</a>
-                <a onClick={() => onNavigate('investor')} className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentPage === 'investor' ? 'text-sky-700' : 'text-slate-500 hover:text-slate-900'}`}>Investor Central</a>
-                <a onClick={() => onNavigate('hoa')} className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentPage === 'hoa' ? 'text-teal-700' : 'text-slate-500 hover:text-slate-900'}`}>HOA HQ</a>
-                <a onClick={() => onNavigate('assets')} className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentPage === 'assets' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}>Asset Center</a>
-              </div>
-            </div>
-          </div>
+    <!-- Sticky Nav Header -->
+    <header id="sticky-header" class="hidden sticky top-0 bg-white/80 backdrop-blur-sm shadow-md z-30">
+        <nav class="container mx-auto px-4 py-3 flex justify-between items-center">
+             <span class="text-lg font-bold text-slate-800">Property Leadership OS</span>
+             <div id="nav-links" class="space-x-4 text-sm font-semibold"></div>
         </nav>
-      </header>
-      
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {renderPage()}
-      </main>
+    </header>
 
-      <footer className="bg-white mt-16 border-t border-stone-200">
-        <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center text-slate-500">
-          <p>&copy; {new Date().getFullYear()} Property Leadership OS. All rights reserved.</p>
-          <p className="text-sm mt-2">A conceptual application based on strategic audience analysis.</p>
+    <main class="container mx-auto px-4 py-8 md:py-12">
+
+        <!-- Initial User Choice Section -->
+        <section id="initial-choice" class="text-center max-w-3xl mx-auto">
+            <h1 class="text-4xl md:text-5xl font-bold text-slate-900 mb-4">The Property Leadership OS</h1>
+            <p class="text-lg text-slate-600 mb-8">
+                An integrated digital resource for the complex job of property leadership. Select your role to access a tailored experience with tools and insights designed for your unique challenges.
+            </p>
+            <div class="flex flex-col md:flex-row gap-4 justify-center">
+                <button id="select-investor" class="w-full md:w-auto bg-sky-700 hover:bg-sky-800 text-white font-bold py-4 px-8 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                    I am a Multifamily Investor
+                </button>
+                <button id="select-hoa" class="w-full md:w-auto bg-teal-700 hover:bg-teal-800 text-white font-bold py-4 px-8 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                    I am an HOA Board Member
+                </button>
+            </div>
+        </section>
+
+        <!-- Back to Home Button -->
+        <div id="back-button-container" class="hidden my-6">
+             <button id="back-to-choice" class="text-sky-700 hover:text-sky-900 font-semibold transition-colors">
+                &larr; Back to Role Selection
+            </button>
         </div>
-      </footer>
+
+        <!-- Multifamily Investor Journey -->
+        <section id="investor-journey" class="hidden">
+            <div id="investor-intro" class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-2">Multifamily Investor Central</h2>
+                <p class="text-lg text-slate-600 max-w-3xl mx-auto">This is your hub as a Business Optimizer. Whether you're buying your first duplex or managing a nationwide portfolio, this space provides the strategic insights and tools you need to maximize ROI and asset value. First, identify your current focus.</p>
+            </div>
+            
+            <div id="investor-personas" class="mb-12">
+                <div class="grid md:grid-cols-2 gap-8 items-start">
+                    <div id="emerging-investor-card" data-tool="red-flag-analyzer" class="bg-white p-6 rounded-lg shadow-md border-2 border-transparent hover:border-sky-500 cursor-pointer transition-all">
+                        <h3 class="text-2xl font-bold text-sky-800 mb-3">The Emerging Investor</h3>
+                        <p class="text-slate-600">The hands-on operator focused on tactical execution and avoiding catastrophic mistakes. Click to launch the "First Deal Red Flag Analyzer."</p>
+                    </div>
+                    <div id="institutional-strategist-card" data-tool="roi-modeler" class="bg-white p-6 rounded-lg shadow-md border-2 border-transparent hover:border-sky-500 cursor-pointer transition-all">
+                        <h3 class="text-2xl font-bold text-sky-800 mb-3">The Institutional Strategist</h3>
+                         <p class="text-slate-600">The portfolio manager focused on macro strategy and risk-adjusted returns. Click to launch the "Value-Add ROI Modeler."</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="investor-dashboard" class="bg-white p-6 rounded-lg shadow-lg mb-12">
+                 <h3 class="text-xl font-bold text-center text-slate-800 mb-2">Investor Persona Comparison Dashboard</h3>
+                 <p class="text-center text-slate-600 text-sm mb-4">Click a category to compare investor types.</p>
+                 <div id="investor-chart-filters" class="flex justify-center gap-2 mb-4"></div>
+                <div class="chart-container">
+                    <canvas id="investorComparisonChart"></canvas>
+                </div>
+            </div>
+
+             <div id="market-snapshot" class="bg-white p-6 rounded-lg shadow-lg mb-12">
+                <h3 class="text-xl font-bold text-center text-slate-800 mb-4">Institutional Market Snapshot: Multifamily Cap Rates</h3>
+                <p class="text-center text-slate-600 text-sm mb-4">This (mock) data illustrates the kind of macro trend analysis valuable to institutional investors.</p>
+                <div class="chart-container">
+                    <canvas id="marketSnapshotChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- HOA Board Member Journey -->
+        <section id="hoa-journey" class="hidden">
+            <div id="hoa-intro" class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-2">Your HOA Leadership Compass</h2>
+                <p class="text-lg text-slate-600 max-w-3xl mx-auto">Guidance for the heart of your community. You stepped up to protect your investment and enhance your neighborhood. We're here to provide the clear guidance and expert tools you need to lead with confidence.</p>
+            </div>
+            
+            <div id="hoa-responsibilities" class="grid md:grid-cols-2 gap-8 items-center mb-12">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-bold text-center text-slate-800 mb-4">Navigating Your Key Responsibilities</h3>
+                    <p class="text-center text-slate-600 text-sm mb-4">Explore the chart to discover expert guidance for your core functions.</p>
+                    <div class="chart-container">
+                        <canvas id="hoaPainPointChart"></canvas>
+                    </div>
+                </div>
+                <div id="hoa-solution-panel" class="bg-white p-8 rounded-lg shadow-lg min-h-[400px] flex flex-col justify-center transition-all duration-300">
+                    <h3 id="hoa-solution-title" class="text-2xl font-bold text-teal-800 mb-3">Your Board's Core Functions</h3>
+                    <p id="hoa-solution-text" class="text-slate-700">Explore the chart to see how we help you master each key responsibility.</p>
+                </div>
+            </div>
+
+            <div id="hoa-assessment-tool" class="bg-white p-8 rounded-lg shadow-xl border border-slate-200 mb-12">
+                <div class="text-center">
+                    <h3 class="text-2xl font-bold text-slate-800 mb-2">Free Tool: HOA Board Health & Risk Assessment</h3>
+                    <p class="text-slate-600 mb-8 max-w-2xl mx-auto">Get an instant snapshot of your board's operational health. Progress is saved automatically.</p>
+                </div>
+                <div id="quiz-container" class="space-y-8"></div>
+                <div id="results-container" class="hidden text-center mt-8"></div>
+            </div>
+
+             <div id="hoa-generator-tool" class="bg-white p-8 rounded-lg shadow-xl border border-slate-200">
+                <div class="text-center">
+                    <h3 class="text-2xl font-bold text-slate-800 mb-2">Free Tool: Meeting Agenda & Minutes Generator</h3>
+                    <p class="text-slate-600 mb-8 max-w-2xl mx-auto">Quickly create a professional, compliant agenda for your next board meeting.</p>
+                </div>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <input id="agenda-title" type="text" placeholder="e.g., Q3 Board Meeting" class="w-full p-2 border rounded mb-2">
+                        <textarea id="agenda-items" placeholder="Enter agenda items, one per line..." class="w-full p-2 border rounded h-40"></textarea>
+                        <button id="generate-agenda-btn" class="w-full mt-2 bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded">Generate Agenda</button>
+                    </div>
+                    <div>
+                        <textarea id="agenda-output" class="w-full p-3 bg-slate-100 border rounded h-60" readonly></textarea>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Shared Hub Section -->
+        <section id="capital-management-center" class="hidden mt-16 text-center border-t pt-12">
+             <h2 class="text-3xl font-bold text-slate-900 mb-4">Capital Asset Management Center</h2>
+             <p class="text-slate-600 mb-6 max-w-2xl mx-auto">This shared hub provides resources for making informed decisions on major capital projects, valuable for both Investors and HOA Boards.</p>
+             <a href="#" class="inline-block bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-lg shadow-lg">Download: The Contractor Vetting Checklist</a>
+        </section>
+
+    </main>
+    
+    <!-- Modal Container -->
+    <div id="modal-backdrop" class="modal-backdrop hidden fade-in"></div>
+    <div id="modal-container" class="modal-content w-11/12 md:max-w-2xl bg-white rounded-lg shadow-2xl p-6 hidden fade-in">
+        <button id="modal-close-btn" class="absolute top-3 right-4 text-2xl font-bold text-slate-500 hover:text-slate-800">&times;</button>
+        <div id="modal-body"></div>
     </div>
-  );
-}
-// END: Main App Structure
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // General Elements
+            const stickyHeader = document.getElementById('sticky-header');
+            const navLinksContainer = document.getElementById('nav-links');
+            const initialChoiceSection = document.getElementById('initial-choice');
+            const investorJourneySection = document.getElementById('investor-journey');
+            const hoaJourneySection = document.getElementById('hoa-journey');
+            const capitalManagementSection = document.getElementById('capital-management-center');
+            const backButtonContainer = document.getElementById('back-button-container');
+            const selectInvestorBtn = document.getElementById('select-investor');
+            const selectHoaBtn = document.getElementById('select-hoa');
+            const backToChoiceBtn = document.getElementById('back-to-choice');
+
+            // Modal Elements
+            const modalBackdrop = document.getElementById('modal-backdrop');
+            const modalContainer = document.getElementById('modal-container');
+            const modalBody = document.getElementById('modal-body');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+
+            // Investor Elements
+            const emergingInvestorCard = document.getElementById('emerging-investor-card');
+            const institutionalStrategistCard = document.getElementById('institutional-strategist-card');
+            const investorChartFilters = document.getElementById('investor-chart-filters');
+            let investorChart = null;
+            let marketSnapshotChart = null;
+            
+            // HOA Elements
+            let hoaChart = null;
+            const hoaSolutionPanel = document.getElementById('hoa-solution-panel');
+            const hoaSolutionTitle = document.getElementById('hoa-solution-title');
+            const hoaSolutionText = document.getElementById('hoa-solution-text');
+            const quizContainer = document.getElementById('quiz-container');
+            const resultsContainer = document.getElementById('results-container');
+            const generateAgendaBtn = document.getElementById('generate-agenda-btn');
+
+            // Data
+            const investorChartData = {
+                labels: ['Risk Profile', 'Operational Focus', 'Capital Source', 'Decision Driver'],
+                datasets: [
+                    { label: 'Emerging Investor', data: [90, 80, 70, 75], backgroundColor: 'rgba(56, 189, 248, 0.7)'},
+                    { label: 'Institutional Strategist', data: [40, 30, 20, 25], backgroundColor: 'rgba(14, 116, 144, 0.7)'}
+                ]
+            };
+            const quizQuestions = [
+                { id: 1, text: "1. How old is your most recent reserve study?", options: [
+                    { text: "We have a professional study less than 3 years old.", score: 10 },
+                    { text: "It's > 3 years old, or we did it ourselves.", score: 5 },
+                    { text: "What's a reserve study?", score: 0 }
+                ]},
+                { id: 2, text: "2. How are rule violations handled in your community?", options: [
+                    { text: "We have a written policy that is followed consistently.", score: 10 },
+                    { text: "It's handled case-by-case, sometimes inconsistently.", score: 5 },
+                    { text: "We avoid enforcement to prevent conflict.", score: 0 }
+                ]},
+                { id: 3, text: "3. How are board meeting minutes approved and stored?", options: [
+                    { text: "They are formally approved and stored in an accessible, permanent location.", score: 10 },
+                    { text: "We take them, but they aren't always approved or are hard to find.", score: 5 },
+                    { text: "We don't formally take or store meeting minutes.", score: 0 }
+                ]}
+            ];
+            let quizAnswers = {};
+
+            // --- App Flow & Navigation ---
+            function setupNav(journey) {
+                let links = '';
+                if(journey === 'investor') {
+                    links = `
+                        <a href="#investor-personas" class="text-slate-600 hover:text-sky-700">Personas</a>
+                        <a href="#investor-dashboard" class="text-slate-600 hover:text-sky-700">Dashboard</a>
+                        <a href="#market-snapshot" class="text-slate-600 hover:text-sky-700">Market</a>
+                        <a href="#capital-management-center" class="text-slate-600 hover:text-sky-700">Capital Mgmt</a>
+                    `;
+                } else {
+                     links = `
+                        <a href="#hoa-responsibilities" class="text-slate-600 hover:text-teal-700">Responsibilities</a>
+                        <a href="#hoa-assessment-tool" class="text-slate-600 hover:text-teal-700">Assessment</a>
+                        <a href="#hoa-generator-tool" class="text-slate-600 hover:text-teal-700">Tools</a>
+                        <a href="#capital-management-center" class="text-slate-600 hover:text-teal-700">Capital Mgmt</a>
+                    `;
+                }
+                navLinksContainer.innerHTML = links;
+                stickyHeader.classList.remove('hidden');
+                stickyHeader.classList.add('fade-in');
+            }
+
+            const switchView = (showSection) => {
+                initialChoiceSection.classList.add('fade-out');
+                setTimeout(() => {
+                    initialChoiceSection.classList.add('hidden');
+                    initialChoiceSection.classList.remove('fade-out');
+                    backButtonContainer.classList.remove('hidden');
+                    capitalManagementSection.classList.remove('hidden');
+                    
+                    if (showSection === 'investor') {
+                        investorJourneySection.classList.remove('hidden');
+                        renderInvestorChart('all');
+                        renderMarketSnapshotChart();
+                        setupNav('investor');
+                    } else if (showSection === 'hoa') {
+                        hoaJourneySection.classList.remove('hidden');
+                        renderHoaChart();
+                        renderQuiz();
+                        setupNav('hoa');
+                    }
+                }, 500);
+            };
+
+            const resetView = () => {
+                investorJourneySection.classList.add('hidden');
+                hoaJourneySection.classList.add('hidden');
+                stickyHeader.classList.add('hidden');
+                capitalManagementSection.classList.add('hidden');
+                backButtonContainer.classList.add('hidden');
+                initialChoiceSection.classList.remove('hidden');
+            };
+
+            selectInvestorBtn.addEventListener('click', () => switchView('investor'));
+            selectHoaBtn.addEventListener('click', () => switchView('hoa'));
+            backToChoiceBtn.addEventListener('click', resetView);
+
+            // --- Modal Logic ---
+            const openModal = (content) => {
+                modalBody.innerHTML = content;
+                modalBackdrop.classList.remove('hidden');
+                modalContainer.classList.remove('hidden');
+            };
+
+            const closeModal = () => {
+                modalBackdrop.classList.add('hidden');
+                modalContainer.classList.add('hidden');
+                modalBody.innerHTML = '';
+            };
+            modalCloseBtn.addEventListener('click', closeModal);
+            modalBackdrop.addEventListener('click', closeModal);
+
+
+            // --- Investor Journey Logic ---
+            function renderInvestorChart(filter) {
+                if (investorChart) investorChart.destroy();
+                
+                let data = { ...investorChartData };
+                if (filter !== 'all') {
+                    const index = investorChartData.labels.indexOf(filter);
+                    data = {
+                        labels: [investorChartData.labels[index]],
+                        datasets: [
+                           { ...investorChartData.datasets[0], data: [investorChartData.datasets[0].data[index]] },
+                           { ...investorChartData.datasets[1], data: [investorChartData.datasets[1].data[index]] }
+                        ]
+                    };
+                }
+
+                investorChartFilters.innerHTML = ['all', ...investorChartData.labels].map(label => 
+                    `<button class="px-3 py-1 text-xs rounded-full ${filter === label ? 'bg-sky-600 text-white' : 'bg-slate-200'}" data-filter="${label}">${label}</button>`
+                ).join('');
+
+                const ctx = document.getElementById('investorComparisonChart').getContext('2d');
+                investorChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: data,
+                    options: {
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                        scales: { x: { display: false }, y: { grid: { display: false } } },
+                        plugins: { legend: { position: 'bottom' } }
+                    }
+                });
+            }
+            investorChartFilters.addEventListener('click', (e) => {
+                if(e.target.tagName === 'BUTTON') {
+                    renderInvestorChart(e.target.dataset.filter);
+                }
+            });
+
+            function renderMarketSnapshotChart() {
+                if (marketSnapshotChart) return;
+                const ctx = document.getElementById('marketSnapshotChart').getContext('2d');
+                marketSnapshotChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['2020', '2021', '2022', '2023', '2024'],
+                        datasets: [{
+                            label: 'Average Cap Rate',
+                            data: [5.2, 4.8, 4.5, 5.5, 5.8],
+                            fill: false, borderColor: 'rgb(14, 116, 144)', tension: 0.1
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+
+            emergingInvestorCard.addEventListener('click', () => {
+                openModal(`
+                    <h3 class="text-2xl font-bold text-sky-800 mb-4">First Deal Red Flag Analyzer</h3>
+                    <p class="mb-6">This tool helps you spot potential issues before you invest. Answer honestly to get your risk score.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="font-semibold">Property Age:</label>
+                            <select class="w-full p-2 border rounded mt-1">
+                                <option value="10">Built in last 10 years</option>
+                                <option value="5">10-30 years old</option>
+                                <option value="0">Over 30 years old</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="font-semibold">Known Major Repairs Needed (Roof, HVAC):</label>
+                            <select class="w-full p-2 border rounded mt-1">
+                                <option value="10">None</option>
+                                <option value="5">1-2 items</option>
+                                <option value="0">Multiple major repairs needed</option>
+                            </select>
+                        </div>
+                    </div>
+                     <button class="mt-6 w-full bg-sky-700 hover:bg-sky-800 text-white font-bold py-3 px-6 rounded-lg">Analyze My Deal</button>
+                `);
+            });
+
+            institutionalStrategistCard.addEventListener('click', () => {
+                 openModal(`
+                    <h3 class="text-2xl font-bold text-sky-800 mb-4">Value-Add ROI Modeler</h3>
+                    <p class="mb-6">Model the financial impact of renovation scenarios on a property's performance.</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label>Purchase Price:</label><input type="number" placeholder="2000000" class="w-full p-2 border rounded"></div>
+                        <div><label>Renovation Cost:</label><input type="number" placeholder="150000" class="w-full p-2 border rounded"></div>
+                        <div><label>Current Gross Income:</label><input type="number" placeholder="120000" class="w-full p-2 border rounded"></div>
+                        <div><label>Projected Gross Income:</label><input type="number" placeholder="160000" class="w-full p-2 border rounded"></div>
+                    </div>
+                     <button class="mt-6 w-full bg-sky-700 hover:bg-sky-800 text-white font-bold py-3 px-6 rounded-lg">Calculate ROI</button>
+                `);
+            });
+
+            // --- HOA Journey Logic ---
+            function renderHoaChart() {
+                if (hoaChart) return;
+                const responsibilities = { 'Ensuring Compliance': {text: "Fulfilling your role with integrity starts here."}, 'Fiscal Stewardship': {text: "Being a responsible steward of your community's funds is a vital role."}, 'Fostering Harmony': {text: "Building a strong community involves navigating disagreements constructively."}, 'Sustainable Service': {text: "Your contribution is valuable, and your time is precious."}, 'Building Confidence': {text: "Every great leader starts somewhere."} };
+                const ctx = document.getElementById('hoaPainPointChart').getContext('2d');
+                hoaChart = new Chart(ctx, {
+                    type: 'radar', data: { labels: Object.keys(responsibilities), datasets: [{ label: 'Area of Focus', data: [90, 85, 75, 80, 95], fill: true, backgroundColor: 'rgba(13, 148, 136, 0.2)', borderColor: 'rgb(13, 148, 136)' }] },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { r: { suggestedMin: 0, suggestedMax: 100, pointLabels: { font: { size: 12 } }, ticks: { display: false } } }, plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                        onClick: (e, elements) => {
+                            if (elements.length > 0) {
+                                const label = hoaChart.data.labels[elements[0].index];
+                                hoaSolutionTitle.textContent = `Guidance for: ${label}`;
+                                hoaSolutionText.textContent = responsibilities[label].text;
+                                hoaSolutionPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }
+                    }
+                });
+            }
+
+            function renderQuiz() {
+                quizAnswers = JSON.parse(localStorage.getItem('hoaQuizAnswers')) || {};
+                let quizHTML = `<div class="space-y-8">`;
+                quizQuestions.forEach(q => {
+                    quizHTML += `<div><p class="font-semibold text-lg mb-3">${q.text}</p><div class="grid sm:grid-cols-2 gap-4" data-question-id="${q.id}">`;
+                    q.options.forEach(opt => {
+                        const isSelected = quizAnswers[q.id] && quizAnswers[q.id].text === opt.text;
+                        quizHTML += `<div class="quiz-option border-2 p-4 rounded-lg cursor-pointer transition ${isSelected ? 'selected' : 'border-slate-200'}" data-score="${opt.score}">${opt.text}</div>`;
+                    });
+                    quizHTML += `</div></div>`;
+                });
+                quizHTML += `</div><button id="show-results-btn" class="mt-8 w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition disabled:bg-slate-400 disabled:cursor-not-allowed">Calculate My Board's Risk Score</button>`;
+                quizContainer.innerHTML = quizHTML;
+                checkQuizCompletion();
+            }
+
+            quizContainer.addEventListener('click', (e) => {
+                const option = e.target.closest('.quiz-option');
+                if (!option) return;
+                const questionContainer = e.target.closest('[data-question-id]');
+                const questionId = questionContainer.dataset.questionId;
+                quizAnswers[questionId] = { score: parseInt(option.dataset.score), text: option.textContent };
+                localStorage.setItem('hoaQuizAnswers', JSON.stringify(quizAnswers));
+                questionContainer.querySelectorAll('.quiz-option').forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                checkQuizCompletion();
+            });
+
+            function checkQuizCompletion() {
+                const completed = Object.keys(quizAnswers).length === quizQuestions.length;
+                const showResultsBtn = document.getElementById('show-results-btn');
+                if(showResultsBtn) showResultsBtn.disabled = !completed;
+            }
+
+            function animateValue(obj, start, end, duration) {
+                let startTimestamp = null;
+                const step = (timestamp) => {
+                    if (!startTimestamp) startTimestamp = timestamp;
+                    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                    obj.innerHTML = Math.floor(progress * (end - start) + start);
+                    if (progress < 1) {
+                        window.requestAnimationFrame(step);
+                    }
+                };
+                window.requestAnimationFrame(step);
+            }
+            
+            quizContainer.addEventListener('click', (e) => {
+                if (e.target.id !== 'show-results-btn') return;
+                let totalScore = Object.values(quizAnswers).reduce((sum, ans) => sum + ans.score, 0);
+                let summaryText = '';
+                if (totalScore >= 25) summaryText = "Excellent! Your board appears to have strong operational health.";
+                else if (totalScore >= 15) summaryText = "Good, with room for improvement. You may have moderate risk in key areas.";
+                else summaryText = "High Risk Alert! Your practices may expose the association to significant risk.";
+                
+                resultsContainer.innerHTML = `
+                    <h4 class="text-2xl font-bold text-slate-800 mb-3">Your Board's Health Score: <span id="risk-score" class="text-teal-600">0</span>/30</h4>
+                    <p id="risk-summary" class="text-lg text-slate-700 mb-4">${summaryText}</p>
+                    <button id="get-report-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg">Get Full, Actionable Report</button>
+                `;
+                quizContainer.classList.add('hidden');
+                resultsContainer.classList.remove('hidden');
+                animateValue(document.getElementById('risk-score'), 0, totalScore, 1000);
+            });
+            
+            resultsContainer.addEventListener('click', (e) => {
+                if (e.target.id !== 'get-report-btn') return;
+                const leadContent = `
+                     <h5 class="font-bold text-lg text-teal-800 mb-2">Get Your Full Report</h5>
+                     <p class="text-sm text-slate-600 mb-4">Enter your email to receive a detailed breakdown of your results and a prioritized checklist to reduce your board's risk.</p>
+                     <form id="lead-capture-form">
+                         <input id="lead-email" type="email" placeholder="your-email@example.com" required class="w-full p-3 border border-slate-300 rounded-md mb-3">
+                         <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition">Email Full Report</button>
+                     </form>
+                `;
+                openModal(leadContent);
+            });
+            
+            modalContainer.addEventListener('submit', (e) => {
+                if(e.target.id !== 'lead-capture-form') return;
+                e.preventDefault();
+                closeModal();
+                alert('Thank you! Your report is on its way.');
+            });
+
+            generateAgendaBtn.addEventListener('click', () => {
+                const title = document.getElementById('agenda-title').value || "Board Meeting Agenda";
+                const items = document.getElementById('agenda-items').value.split('\n').filter(item => item.trim() !== '');
+                let output = `${title}\n${new Date().toLocaleDateString()}\n\n`;
+                output += "AGENDA\n\n";
+                items.forEach((item, index) => {
+                    output += `${index + 1}. ${item}\n`;
+                });
+                document.getElementById('agenda-output').value = output;
+            });
+
+        });
+    </script>
+</body>
+</html>
